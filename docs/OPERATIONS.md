@@ -15,6 +15,37 @@
 
 ## Monitoring
 
+### Log Aggregator JSONL Output
+
+`tools/log_aggregator.py` supports machine-readable JSONL output for downstream
+operations tooling that should not scrape the human summary text.
+
+```bash
+python3 tools/log_aggregator.py --input '/var/log/app/*.log' --format jsonl > aggregated.jsonl
+python3 tools/log_aggregator.py --dir /var/log/app --format jsonl --output aggregated.jsonl
+```
+
+Each JSONL line is one record with this schema:
+
+| Field | Description |
+|-------|-------------|
+| `timestamp` | ISO-8601 UTC timestamp when one can be parsed; otherwise `null`. |
+| `level` | Normalized severity such as `info`, `warn`, `error`, `debug`, or `warning` for parser warnings. |
+| `source` | Input file path that produced the record. |
+| `message` | Human-readable log message or warning text. |
+| `metadata` | Structured parser details including original fields, detected service, parser format, and warning markers. |
+
+Timestamped records are emitted in parsed timestamp order across input files.
+Records without parseable timestamps keep their input order after timestamped
+records. Lines that are too unstructured to extract a timestamp, level, or
+service are emitted as `warning` records with `metadata.warning` set to
+`unparsed_line` and the raw line under `metadata.fields.raw`.
+
+The default `--format text` behavior keeps the existing human summary and writes
+a report file. Use `--report-format json|csv|html` to choose that report format.
+The legacy `--format json|csv|html` aliases still write report files for older
+scripts, but new automation should use `--format jsonl`.
+
 ### Health Check Endpoints
 
 Each service exposes a health check endpoint:
